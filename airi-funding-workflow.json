@@ -1,0 +1,1470 @@
+{
+  "name": "AIRI \u2014 Funding Opportunity Evaluation & Approval",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "funding-intake",
+        "responseMode": "onReceived"
+      },
+      "id": "9b8c3a60121543fa",
+      "name": "Funding Intake (Webhook)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -1160,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// AIRI organisational profile \u2014 EDIT to match AIRI's real positioning and rules.\nconst AIRI = {\n  name: \"AIRI Foundation\",\n  mission: \"Advance AI literacy and responsible AI education across Canada as a nonprofit.\",\n  stands_for: \"AIRI exists to make AI understandable and safe for everyday Canadians, prioritising underserved communities and public-interest education over commercialisation.\",\n  values: [\"responsible and ethical AI\",\"equitable access\",\"community empowerment\",\"education over commercialisation\",\"transparency\"],\n  focus_areas: [\"AI literacy\",\"AI education\",\"responsible AI\",\"digital skills\",\"community education\"],\n  // Red lines: reasons to decline ON PRINCIPLE even if the opportunity is eligible and topical.\n  red_lines: [\n    \"funders whose core business conflicts with responsible-AI values (e.g. mass surveillance, exploitative data practices)\",\n    \"funding that requires AIRI to endorse or promote a specific product or vendor\",\n    \"opportunities that pull AIRI away from education toward purely commercial delivery\",\n    \"conditions that compromise AIRI's independence or public-interest mission\"\n  ],\n  // Deterministic administrative eligibility:\n  country_eligible: [\"Canada\",\"CA\"],\n  org_types_eligible: [\"nonprofit\",\"charity\",\"not-for-profit\"],\n  funding_min: 5000,\n  funding_max: 250000,\n  currency: \"CAD\",\n  min_lead_days: 7\n};\n\nfunction slugHash(s){ let h=5381; for(let i=0;i<s.length;i++){h=((h<<5)+h)+s.charCodeAt(i); h=h>>>0;} return h.toString(36); }\n\nconst src = $json.body ? $json.body : $json;\nconst title=(src.title||\"\").trim(), funder=(src.funder||\"\").trim(), url=(src.url||\"\").trim();\nconst opportunity_id = url ? \"url_\"+slugHash(url) : \"kv_\"+slugHash((funder+\"|\"+title).toLowerCase());\n\nreturn [{ json: {\n  opportunity_id, title, funder, url,\n  amount: src.amount ?? null, currency: src.currency || AIRI.currency,\n  deadline: src.deadline || null, country: src.country || null,\n  org_type: src.org_type || null, description: src.description || \"\",\n  airi: AIRI\n}}];\n"
+      },
+      "id": "fc1cf5d448244b5f",
+      "name": "Normalize + AIRI Profile",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -940,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {},
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "opportunity_id",
+              "keyValue": "={{ $json.opportunity_id }}"
+            }
+          ]
+        }
+      },
+      "id": "bd70e33f69ab42f9",
+      "name": "Get Existing Record",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst incoming = $('Normalize + AIRI Profile').first().json;\nconst existing = items.length && items[0].json && items[0].json.stage ? items[0].json : null;\nreturn [{ json: { ...incoming, stage: existing ? existing.stage : \"new\", is_new: !existing } }];\n"
+      },
+      "id": "6585177b9b5b4bec",
+      "name": "Resolve Stage",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -500,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "typeValidation": "loose"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.stage }}",
+                    "rightValue": "new",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "outputKey": "pipeline"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        },
+        "fallbackOutputName": "already_handled"
+      },
+      "id": "da044803d3f24c4f",
+      "name": "Route by Stage",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        -280,
+        340
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst o=$json, A=o.airi, reasons=[];\nif (o.country && !A.country_eligible.map(c=>c.toLowerCase()).includes(String(o.country).toLowerCase()))\n  reasons.push(\"Country not eligible: \"+o.country);\nif (o.org_type && !A.org_types_eligible.map(t=>t.toLowerCase()).includes(String(o.org_type).toLowerCase()))\n  reasons.push(\"Org type not eligible: \"+o.org_type);\nif (o.amount!=null && (o.amount<A.funding_min || o.amount>A.funding_max))\n  reasons.push(\"Amount \"+o.amount+\" outside range \"+A.funding_min+\"-\"+A.funding_max);\nif (o.deadline){ const d=(new Date(o.deadline)-new Date())/86400000;\n  if (isNaN(d)) reasons.push(\"Unparseable deadline: \"+o.deadline);\n  else if (d<A.min_lead_days) reasons.push(\"Deadline too soon (\"+Math.round(d)+\" days lead)\"); }\nreturn [{ json: { ...o, gate_pass: reasons.length===0, gate_reason: reasons.join(\"; \")||\"Passed hard eligibility gate\" } }];\n"
+      },
+      "id": "97929087c8594c62",
+      "name": "Hard Eligibility Gate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -40,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.gate_pass }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "a49be1c608214e9e",
+      "name": "Passed Gate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        180,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {},
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "opportunity_id",
+              "keyValue": "={{ $json.opportunity_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "opportunity_id": "={{ $json.opportunity_id }}",
+            "title": "={{ $json.title }}",
+            "funder": "={{ $json.funder }}",
+            "stage": "rejected_ineligible",
+            "reason": "={{ $json.gate_reason }}",
+            "score": "={{ 0 }}",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "opportunity_id"
+          ],
+          "schema": [
+            {
+              "id": "opportunity_id",
+              "displayName": "opportunity_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "funder",
+              "displayName": "funder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "0e6bf538565e49ab",
+      "name": "Log: Ineligible",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        420,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "temperature": 0.2
+        }
+      },
+      "id": "96ef7ea9851e41b4",
+      "name": "Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [
+        180,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are the grant-evaluation analyst for AIRI Foundation, a Canadian AI-literacy nonprofit.\n\nAIRI profile (mission, values, focus, and RED LINES it declines on principle):\n{{ JSON.stringify($json.airi) }}\n\nFunding opportunity:\nTitle: {{ $json.title }}\nFunder: {{ $json.funder }}\nAmount: {{ $json.amount }} {{ $json.currency }}\nDeadline: {{ $json.deadline }}\nCountry: {{ $json.country }}\nDescription: {{ $json.description }}\nURL: {{ $json.url }}\n\nThe SINGLE MOST IMPORTANT question is whether this genuinely aligns with what AIRI stands for \u2014 its\nmission and values \u2014 not merely whether it mentions AI. If it conflicts with any of AIRI's values or\nred lines, mark mission_alignment \"misaligned\" regardless of topical overlap or how attractive the money is.\n\nReason step by step, then output ONLY a JSON object (no markdown, no text outside the JSON):\n{\n  \"summary\": \"1-2 plain sentences: what this grant funds and who the funder is\",\n  \"mission_alignment\": \"aligned\" | \"partial\" | \"misaligned\",\n  \"mission_score\": integer 0-100,\n  \"approval_reasons\": [ \"concrete reasons AIRI should pursue this, EACH tied to a specific AIRI focus area, value, or mission point\" ],\n  \"watch_outs\": [ \"risks, caveats, unknowns, effort concerns, or strings-attached the reviewer should weigh; empty array if none\" ],\n  \"values_conflicts\": [ short strings, empty array if none ],\n  \"alignment_score\": integer 0-100,\n  \"capacity_fit\": short string,\n  \"effort_estimate\": \"low\" | \"medium\" | \"high\",\n  \"reasoning\": \"2-3 sentence justification\",\n  \"recommendation\": \"pursue\" | \"skip\"\n}\nOnly genuinely aligned AND eligible opportunities should reach alignment_score 80+. Be strict.\nWrite approval_reasons and watch_outs so a busy reviewer can decide in under a minute without reading the source."
+      },
+      "id": "046f297446024705",
+      "name": "Evaluate Opportunity",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.5,
+      "position": [
+        420,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst raw=($json.text ?? $json.output ?? \"\").toString();\nconst cleaned=raw.replace(/```json/gi,\"\").replace(/```/g,\"\").trim();\nlet ev;\ntry { ev=JSON.parse(cleaned); }\ncatch(e){ ev={ summary:\"\", mission_alignment:\"misaligned\", mission_score:0, approval_reasons:[], watch_outs:[\"Model output could not be parsed as JSON\"],\n               values_conflicts:[\"Model output could not be parsed as JSON\"], alignment_score:0, reasoning:\"Unparseable model output.\", recommendation:\"skip\" }; }\nconst base=$('Hard Eligibility Gate').first().json;\nreturn [{ json: {\n  ...base,\n  mission_alignment: (ev.mission_alignment||\"misaligned\").toLowerCase(),\n  mission_score: Number(ev.mission_score)||0,\n  values_conflicts: ev.values_conflicts||[],\n  alignment_score: Number(ev.alignment_score)||0,\n  capacity_fit: ev.capacity_fit||\"\",\n  effort_estimate: ev.effort_estimate||\"unknown\",\n  summary: ev.summary||\"\",\n  approval_reasons: Array.isArray(ev.approval_reasons)?ev.approval_reasons:[],\n  watch_outs: Array.isArray(ev.watch_outs)?ev.watch_outs:[],\n  eval_reasoning: ev.reasoning||\"\",\n  recommendation: ev.recommendation||\"skip\"\n}}];\n"
+      },
+      "id": "1886d6cf1e754dea",
+      "name": "Parse Evaluation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.mission_alignment }}",
+              "rightValue": "misaligned",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "89e2946e691f40ea",
+      "name": "Values/Mission Misaligned?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        860,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {},
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "opportunity_id",
+              "keyValue": "={{ $json.opportunity_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "opportunity_id": "={{ $json.opportunity_id }}",
+            "title": "={{ $json.title }}",
+            "funder": "={{ $json.funder }}",
+            "stage": "rejected_misaligned",
+            "reason": "={{ $json.values_conflicts.join('; ') || $json.eval_reasoning }}",
+            "score": "={{ $json.alignment_score }}",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "opportunity_id"
+          ],
+          "schema": [
+            {
+              "id": "opportunity_id",
+              "displayName": "opportunity_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "funder",
+              "displayName": "funder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "2e52b96767244675",
+      "name": "Log: Misaligned",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1080,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.alignment_score }}",
+              "rightValue": 80,
+              "operator": {
+                "type": "number",
+                "operation": "gte"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "98cb2758985c4154",
+      "name": "Score >= 80?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1080,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {},
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "opportunity_id",
+              "keyValue": "={{ $json.opportunity_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "opportunity_id": "={{ $json.opportunity_id }}",
+            "title": "={{ $json.title }}",
+            "funder": "={{ $json.funder }}",
+            "stage": "rejected_low_fit",
+            "reason": "={{ $json.eval_reasoning }}",
+            "score": "={{ $json.alignment_score }}",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "opportunity_id"
+          ],
+          "schema": [
+            {
+              "id": "opportunity_id",
+              "displayName": "opportunity_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "funder",
+              "displayName": "funder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "672948abd63f4b68",
+      "name": "Log: Low Fit",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {},
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "opportunity_id",
+              "keyValue": "={{ $json.opportunity_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "opportunity_id": "={{ $json.opportunity_id }}",
+            "title": "={{ $json.title }}",
+            "funder": "={{ $json.funder }}",
+            "stage": "pending_approval",
+            "reason": "={{ $json.eval_reasoning }}",
+            "score": "={{ $json.alignment_score }}",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "opportunity_id"
+          ],
+          "schema": [
+            {
+              "id": "opportunity_id",
+              "displayName": "opportunity_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "funder",
+              "displayName": "funder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "040f8f6d7d7d428d",
+      "name": "Mark Pending Approval",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "fromEmail": "REPLACE_WITH_FROM_EMAIL",
+        "toEmail": "REPLACE_WITH_APPROVER_EMAIL",
+        "subject": "=Funding review: {{ $('Parse Evaluation').item.json.title }} \u2014 {{ $('Parse Evaluation').item.json.alignment_score }}/100",
+        "message": "<h3>Funding opportunity \u2014 review before sign-off</h3>\n<p><b>What this is:</b> {{ $('Parse Evaluation').item.json.summary }}</p>\n<table cellpadding=\"6\" style=\"border-collapse:collapse\">\n<tr><td><b>Funder</b></td><td>{{ $('Parse Evaluation').item.json.funder }}</td></tr>\n<tr><td><b>Amount</b></td><td>{{ $('Parse Evaluation').item.json.amount }} {{ $('Parse Evaluation').item.json.currency }}</td></tr>\n<tr><td><b>Deadline</b></td><td>{{ $('Parse Evaluation').item.json.deadline }}</td></tr>\n<tr><td><b>Mission alignment</b></td><td>{{ $('Parse Evaluation').item.json.mission_alignment }} ({{ $('Parse Evaluation').item.json.mission_score }}/100)</td></tr>\n<tr><td><b>Overall score</b></td><td>{{ $('Parse Evaluation').item.json.alignment_score }}/100</td></tr>\n<tr><td><b>Effort</b></td><td>{{ $('Parse Evaluation').item.json.effort_estimate }}</td></tr>\n</table>\n<p><b>Why it aligns with AIRI \u2014 reasons to approve:</b></p>\n<ul>{{ $('Parse Evaluation').item.json.approval_reasons.map(r => '<li>'+r+'</li>').join('') || '<li>No specific reasons generated</li>' }}</ul>\n<p><b>Watch-outs to weigh before saying yes:</b></p>\n<ul>{{ $('Parse Evaluation').item.json.watch_outs.concat($('Parse Evaluation').item.json.values_conflicts).map(w => '<li>'+w+'</li>').join('') || '<li>None flagged</li>' }}</ul>\n<p><a href=\"{{ $('Parse Evaluation').item.json.url }}\">View the full opportunity</a></p>\n<p>Knowing the above, the decision is simply: <b>do we want to pursue this?</b></p>",
+        "responseType": "approval",
+        "options": {
+          "limitWaitTime": {
+            "values": {
+              "resumeAmount": 7,
+              "resumeUnit": "days"
+            }
+          }
+        }
+      },
+      "id": "1924cab5afdd4af4",
+      "name": "Human Approval (Email)",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1520,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "typeValidation": "loose"
+          },
+          "conditions": [
+            {
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "30248df0ffcd45c5",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1740,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {},
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "opportunity_id",
+              "keyValue": "={{ $('Parse Evaluation').item.json.opportunity_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "opportunity_id": "={{ $('Parse Evaluation').item.json.opportunity_id }}",
+            "title": "={{ $('Parse Evaluation').item.json.title }}",
+            "funder": "={{ $('Parse Evaluation').item.json.funder }}",
+            "stage": "declined_by_human",
+            "reason": "Human chose not to pursue",
+            "score": "={{ $('Parse Evaluation').item.json.alignment_score }}",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "opportunity_id"
+          ],
+          "schema": [
+            {
+              "id": "opportunity_id",
+              "displayName": "opportunity_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "funder",
+              "displayName": "funder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "b0a8801fd81f4d94",
+      "name": "Log: Declined",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1960,
+        520
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {},
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "opportunity_id": "={{ $('Parse Evaluation').item.json.opportunity_id }}",
+            "title": "={{ $('Parse Evaluation').item.json.title }}",
+            "funder": "={{ $('Parse Evaluation').item.json.funder }}",
+            "deadline": "={{ $('Parse Evaluation').item.json.deadline }}",
+            "amount": "={{ $('Parse Evaluation').item.json.amount }}",
+            "score": "={{ $('Parse Evaluation').item.json.alignment_score }}",
+            "effort": "={{ $('Parse Evaluation').item.json.effort_estimate }}",
+            "owner": "UNASSIGNED",
+            "required_docs": "Proposal narrative; Budget; Org registration; Letters of support",
+            "draft_notes": "={{ $('Parse Evaluation').item.json.eval_reasoning }}",
+            "status": "prep_started",
+            "created_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "opportunity_id",
+              "displayName": "opportunity_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "funder",
+              "displayName": "funder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "deadline",
+              "displayName": "deadline",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "amount",
+              "displayName": "amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "effort",
+              "displayName": "effort",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "owner",
+              "displayName": "owner",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "required_docs",
+              "displayName": "required_docs",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "draft_notes",
+              "displayName": "draft_notes",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "status",
+              "displayName": "status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "c9bb2f7dc05b4860",
+      "name": "Create Application-Prep Record",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        1960,
+        740
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {},
+        "matchType": "anyCondition",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "opportunity_id",
+              "keyValue": "={{ $('Parse Evaluation').item.json.opportunity_id }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "opportunity_id": "={{ $('Parse Evaluation').item.json.opportunity_id }}",
+            "stage": "application_prep",
+            "reason": "Approved by human; prep record created",
+            "updated_at": "={{ $now.toISO() }}"
+          },
+          "matchingColumns": [
+            "opportunity_id"
+          ],
+          "schema": [
+            {
+              "id": "opportunity_id",
+              "displayName": "opportunity_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "funder",
+              "displayName": "funder",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "stage",
+              "displayName": "stage",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "reason",
+              "displayName": "reason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "score",
+              "displayName": "score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "updated_at",
+              "displayName": "updated_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": true,
+          "convertFieldsToString": false
+        }
+      },
+      "id": "c3d4c8fcd7914aec",
+      "name": "Mark Application Prep",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1,
+      "position": [
+        2180,
+        740
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "06fae1550db14e17",
+      "name": "Already Handled",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        480
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "6b099040bc784362",
+      "name": "Done",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2400,
+        560
+      ]
+    }
+  ],
+  "connections": {
+    "Funding Intake (Webhook)": {
+      "main": [
+        [
+          {
+            "node": "Normalize + AIRI Profile",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize + AIRI Profile": {
+      "main": [
+        [
+          {
+            "node": "Get Existing Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Existing Record": {
+      "main": [
+        [
+          {
+            "node": "Resolve Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Stage": {
+      "main": [
+        [
+          {
+            "node": "Route by Stage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Stage": {
+      "main": [
+        [
+          {
+            "node": "Hard Eligibility Gate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Already Handled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Hard Eligibility Gate": {
+      "main": [
+        [
+          {
+            "node": "Passed Gate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Passed Gate?": {
+      "main": [
+        [
+          {
+            "node": "Evaluate Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log: Ineligible",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log: Ineligible": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Evaluate Opportunity",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Evaluate Opportunity": {
+      "main": [
+        [
+          {
+            "node": "Parse Evaluation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Values/Mission Misaligned?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Values/Mission Misaligned?": {
+      "main": [
+        [
+          {
+            "node": "Log: Misaligned",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Score >= 80?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log: Misaligned": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Score >= 80?": {
+      "main": [
+        [
+          {
+            "node": "Mark Pending Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log: Low Fit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log: Low Fit": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Pending Approval": {
+      "main": [
+        [
+          {
+            "node": "Human Approval (Email)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Approval (Email)": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Create Application-Prep Record",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log: Declined",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Application-Prep Record": {
+      "main": [
+        [
+          {
+            "node": "Mark Application Prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Application Prep": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log: Declined": {
+      "main": [
+        [
+          {
+            "node": "Done",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {},
+  "pinData": {}
+}

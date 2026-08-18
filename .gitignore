@@ -1,0 +1,6 @@
+# Never commit secrets or local n8n data
+.env
+*.key
+key.txt
+.n8n/
+node_modules/
