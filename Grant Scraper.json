@@ -1,0 +1,170 @@
+{
+  "name": "Grant Scraper",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 8
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1280,
+        -320
+      ],
+      "id": "1f57003d-590d-418c-90a1-e2b87fca2dcd",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "=YOUR_GEMINI_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Search the web for CURRENT, OPEN grant funding opportunities relevant to a Canadian AI-literacy nonprofit (AIRI Foundation) whose work spans: AI literacy and education, digital skills, community and public-interest technology, ethical AI and governance, nonprofit digital transformation, applied AI R&D, workforce upskilling, youth STEM, and academic-community partnerships. Include grants from any country (eligibility is filtered downstream). For EACH opportunity you find, list: title, funder, amount, deadline, country, organization type eligible, a one-sentence description, and the source URL. Only include real opportunities you can find with a working source URL. List up to 8.\"\n        }\n      ]\n    }\n  ],\n  \"tools\": [\n    { \"google_search\": {} }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1072,
+        -320
+      ],
+      "id": "05ee7e8f-69c3-4c2f-8385-80ab15bace23",
+      "name": "HTTP Request",
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "YOUR_GEMINI_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": {{ JSON.stringify(\"Convert the following grant listing into a valid JSON array. Each element must have exactly these fields: title, funder, amount, deadline, country, org_type, description, url. Use plain strings. Output ONLY the JSON array, no markdown, no code fences.\\n\\n---\\n\" + $json.candidates[0].content.parts[0].text) }}\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"responseMimeType\": \"application/json\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -848,
+        -320
+      ],
+      "id": "3fbe0f67-79b8-4f50-8194-725527fecd21",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.candidates[0].content.parts[0].text;\nconst grants = JSON.parse(raw);\nreturn grants.map(g => ({ json: g }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        -320
+      ],
+      "id": "8867f686-b85b-47c1-bd18-f14ecc001c2a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://40.233.120.147:5678/webhook/funding-intake",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=   {{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -400,
+        -320
+      ],
+      "id": "0b6a4709-17cf-4503-99be-91e8e5a0cf9d",
+      "name": "HTTP Request2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "0843b691-b811-4341-ad9e-1ea29212b03a",
+  "meta": {
+    "instanceId": "7999bb4417efaa6475aca6e3d5399151db06ea0a6363a0919976732bea494153"
+  },
+  "nodeGroups": [],
+  "id": "wbjdXxTfYSan25xp",
+  "tags": []
+}
