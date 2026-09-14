@@ -1,0 +1,303 @@
+{
+  "name": "Partner Outreach",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "partner-outreach",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1168,
+        -160
+      ],
+      "id": "3ca479de-a3b5-4d7b-ad8d-88987afa98f1",
+      "name": "Webhook",
+      "webhookId": "0732bf50-c433-4784-8a2f-5e539f995dd0"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "YOUR_GEMINI_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"=You are helping AIRI Foundation find partnership opportunities. Below is a grant that does NOT fit AIRI but may fit OTHER organizations. Find up to 2 REAL, currently-operating organizations (preferably Canadian, or operating in the grant country) whose mission aligns with what this grant funds. For EACH organization provide: name, a one-sentence description, why this grant fits them, and their website URL. Only include real organizations with a working URL.\\n\\nGRANT:\\nTitle: {{ $('Edit Fields').item.json.title }}\\nFunder: {{ $('Edit Fields').item.json.funder }}\\nAmount: {{ $('Edit Fields').item.json.amount }}\\nCountry: {{ $('Edit Fields').item.json.country }}\\nDescription: {{ $('Edit Fields').item.json.description }}\"\n        }\n      ]\n    }\n  ],\n  \"tools\": [\n    { \"google_search\": {} }\n  ]\n}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -768,
+        -160
+      ],
+      "id": "b59ae821-f7d1-4b17-b456-ad4e919f9d65",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "979334a6-7320-47eb-b338-6e865a023d18",
+              "name": "title",
+              "value": "{{ $json.body.title }}",
+              "type": "string"
+            },
+            {
+              "id": "1cdb37d8-2a7f-4b18-b7b4-11ec9203792a",
+              "name": "funder",
+              "value": "{{ $json.body.funder }}",
+              "type": "string"
+            },
+            {
+              "id": "99fc8eac-57aa-4f6b-8149-1112c2840a44",
+              "name": "amount",
+              "value": "={{ $json.body.amount }}",
+              "type": "string"
+            },
+            {
+              "id": "2109cc38-0cd5-4d52-86e6-65115b80f169",
+              "name": "country",
+              "value": "{{ $json.body.country }}",
+              "type": "string"
+            },
+            {
+              "id": "7c32913a-740a-4b8b-afca-1445bc506018",
+              "name": "description",
+              "value": "{{ $json.body.description }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -960,
+        -160
+      ],
+      "id": "e7b94ef1-4cde-464d-b155-9cead8936885",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "YOUR_GEMINI_API_KEY"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": {{ JSON.stringify($('Code in JavaScript').item.json.prompt) }}\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"responseMimeType\": \"application/json\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -400,
+        -160
+      ],
+      "id": "00353be7-c201-4d82-9e0c-147fa4910ea2",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const grant = $('Webhook').item.json.body;\nconst matchedOrgs = $input.first().json.candidates[0].content.parts[0].text;\n\nconst prompt = `You are writing partnership outreach emails for AIRI Foundation. AIRI is a Canadian non-profit dedicated to advancing AI literacy, ethical technology governance, and workflow automation across communities and industries, bridging cutting-edge AI research with practical, community-centered implementation.\n\nAIRI found a grant that fits the organizations listed below (not AIRI itself). For EACH organization listed, write a warm, professional outreach email in which AIRI: (1) introduces itself briefly, (2) notes it came across this grant and believes it is a strong fit for their organization, (3) highlights what the grant offers in relation to their work, and (4) proposes that AIRI co-implement the project with them as a technology and implementation partner. Keep each email concise and appealing.\n\nReturn a JSON array. Each element must have: org_name, org_url, email_subject, email_body. Output ONLY the JSON array, no markdown, no code fences.\n\nGRANT:\nTitle: ${grant.title}\nFunder: ${grant.funder}\nAmount: ${grant.amount}\nCountry: ${grant.country}\nDescription: ${grant.description}\n\nMATCHED ORGANIZATIONS (use ONLY these real organizations, do not invent others):\n${matchedOrgs}`;\n\nreturn [{ json: { prompt } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        -160
+      ],
+      "id": "bfc60c1c-e35c-4321-ac0a-080009835d61",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json.candidates[0].content.parts[0].text;\nconst emails = JSON.parse(raw);\nconst grant = $('Webhook').item.json.body;\nfunction esc(s){ return String(s||\"\").replace(/&/g,\"&amp;\").replace(/</g,\"&lt;\").replace(/>/g,\"&gt;\"); }\n\nconst cards = emails.map(e => `\n  <table width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"margin:16px 0; border:1px solid #e0e0e0; border-radius:8px; background:#ffffff;\">\n    <tr><td style=\"padding:18px 22px;\">\n      <div style=\"font-size:16px; font-weight:700; color:#1a1a1a;\">${esc(e.org_name)}</div>\n      <div style=\"font-size:13px; margin:2px 0 12px;\"><a href=\"${esc(e.org_url)}\" style=\"color:#2c7a4b; text-decoration:none;\">${esc(e.org_url)}</a></div>\n      <div style=\"font-size:13px; color:#555; margin-bottom:4px;\"><b>Subject:</b> ${esc(e.email_subject)}</div>\n      <div style=\"font-size:13.5px; color:#333; line-height:1.6; white-space:pre-wrap; background:#f9f9f9; border-radius:6px; padding:14px 16px; margin-top:8px;\">${esc(e.email_body)}</div>\n    </td></tr>\n  </table>`).join(\"\");\n\nconst html = `\n<div style=\"background:#f2f4f6; padding:24px 0; font-family:'Segoe UI',Arial,sans-serif;\">\n  <table width=\"660\" cellpadding=\"0\" cellspacing=\"0\" align=\"center\" style=\"margin:0 auto; background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.08);\">\n    <tr><td style=\"background:#8e44ad; padding:24px 30px;\">\n      <div style=\"color:#fff; font-size:13px; font-weight:700; letter-spacing:0.5px;\">DRAFT — REVIEW BEFORE SENDING</div>\n      <div style=\"color:#fff; font-size:20px; font-weight:700; margin-top:6px;\">Partnership Outreach Suggestions</div>\n    </td></tr>\n    <tr><td style=\"padding:22px 30px;\">\n      <p style=\"font-size:14px; color:#555; line-height:1.6; margin:0 0 6px;\">\n        AIRI declined this grant for its own mission, but it may fit the organizations below.\n        Draft outreach emails are prepared for your review — <b>nothing has been sent.</b>\n      </p>\n      <div style=\"background:#f4f6f6; border-radius:6px; padding:12px 16px; margin:14px 0; font-size:13px; color:#333;\">\n        <b>Grant:</b> ${esc(grant.title)} &nbsp;•&nbsp; <b>Funder:</b> ${esc(grant.funder)} &nbsp;•&nbsp; <b>Amount:</b> ${esc(grant.amount)}\n      </div>\n      ${cards}\n    </td></tr>\n    <tr><td style=\"background:#f8f9fa; padding:16px 30px; border-top:1px solid #eee;\">\n      <div style=\"font-size:12px; color:#999;\">Prepared automatically by AIRI's funding workflow. Copy, edit, and send manually after review.</div>\n    </td></tr>\n  </table>\n</div>`;\n\nreturn [{ json: { html, count: emails.length } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -208,
+        -160
+      ],
+      "id": "57f81bd7-23c1-498a-9ae5-5b924c49c04b",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "fromEmail": "vatochukwu30@gmail.com",
+        "toEmail": "vatochukwu30@gmail.com",
+        "subject": "=[DRAFT] Partnership Outreach — {{ $('Webhook').item.json.body.title }}",
+        "html": "={{ $json.html }}",
+        "options": {
+          "ccEmail": "contact@airifoundation.org"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        208,
+        -160
+      ],
+      "id": "e50540cc-208f-460f-93a4-2807a9a33c42",
+      "name": "Send an Email",
+      "webhookId": "597858e9-4273-462a-bae5-1ac403094cae",
+      "credentials": {
+        "smtp": {
+          "id": "EfSkje2liJkeyIup",
+          "name": "SMTP account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "f5b6fe40-2950-42dc-9e7e-4ee66fde48db",
+              "leftValue": "={{ $json.count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        16,
+        -160
+      ],
+      "id": "4bd3ec93-cd0f-4376-8672-6772d3846e6a",
+      "name": "If"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "5551dbee-68c8-44f6-a946-a223fbead670",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "7999bb4417efaa6475aca6e3d5399151db06ea0a6363a0919976732bea494153"
+  },
+  "nodeGroups": [],
+  "id": "wjfZivnh9bPMP7f6",
+  "tags": []
+}

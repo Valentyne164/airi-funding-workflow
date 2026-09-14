@@ -29,7 +29,7 @@
           "parameters": [
             {
               "name": "x-goog-api-key",
-              "value": "=YOUR_GEMINI_API_KEY"
+              "value": "YOUR_GEMINI_API_KEY"
             }
           ]
         },
