@@ -32,17 +32,12 @@
     {
       "parameters": {
         "operation": "get",
-        "dataTableId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "options": {},
-        "matchType": "anyCondition",
+        "tableId": "REPLACE_WITH_funding_opportunities_TABLE_ID",
         "filters": {
           "conditions": [
             {
               "keyName": "opportunity_id",
+              "condition": "eq",
               "keyValue": "={{ $json.opportunity_id }}"
             }
           ]
@@ -156,109 +151,18 @@
     {
       "parameters": {
         "operation": "upsert",
-        "dataTableId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "options": {},
-        "matchType": "anyCondition",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "opportunity_id",
-              "keyValue": "={{ $json.opportunity_id }}"
-            }
-          ]
-        },
+        "tableId": "REPLACE_WITH_funding_opportunities_TABLE_ID",
+        "matchOn": "opportunity_id",
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "opportunity_id": "={{ $json.opportunity_id }}",
             "title": "={{ $json.title }}",
             "funder": "={{ $json.funder }}",
             "stage": "rejected_ineligible",
             "reason": "={{ $json.gate_reason }}",
-            "score": "={{ 0 }}",
+            "score": 0,
             "updated_at": "={{ $now.toISO() }}"
-          },
-          "matchingColumns": [
-            "opportunity_id"
-          ],
-          "schema": [
-            {
-              "id": "opportunity_id",
-              "displayName": "opportunity_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "title",
-              "displayName": "title",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "funder",
-              "displayName": "funder",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "stage",
-              "displayName": "stage",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "reason",
-              "displayName": "reason",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "score",
-              "displayName": "score",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": true,
-          "convertFieldsToString": false
+          }
         }
       },
       "id": "0e6bf538565e49ab",
@@ -345,109 +249,18 @@
     {
       "parameters": {
         "operation": "upsert",
-        "dataTableId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "options": {},
-        "matchType": "anyCondition",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "opportunity_id",
-              "keyValue": "={{ $json.opportunity_id }}"
-            }
-          ]
-        },
+        "tableId": "REPLACE_WITH_funding_opportunities_TABLE_ID",
+        "matchOn": "opportunity_id",
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "opportunity_id": "={{ $json.opportunity_id }}",
             "title": "={{ $json.title }}",
             "funder": "={{ $json.funder }}",
             "stage": "rejected_misaligned",
-            "reason": "={{ $json.values_conflicts.join('; ') || $json.eval_reasoning }}",
+            "reason": "={{ ($json.values_conflicts.join('; ')) || $json.eval_reasoning }}",
             "score": "={{ $json.alignment_score }}",
             "updated_at": "={{ $now.toISO() }}"
-          },
-          "matchingColumns": [
-            "opportunity_id"
-          ],
-          "schema": [
-            {
-              "id": "opportunity_id",
-              "displayName": "opportunity_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "title",
-              "displayName": "title",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "funder",
-              "displayName": "funder",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "stage",
-              "displayName": "stage",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "reason",
-              "displayName": "reason",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "score",
-              "displayName": "score",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": true,
-          "convertFieldsToString": false
+          }
         }
       },
       "id": "2e52b96767244675",
@@ -491,23 +304,9 @@
     {
       "parameters": {
         "operation": "upsert",
-        "dataTableId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "options": {},
-        "matchType": "anyCondition",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "opportunity_id",
-              "keyValue": "={{ $json.opportunity_id }}"
-            }
-          ]
-        },
+        "tableId": "REPLACE_WITH_funding_opportunities_TABLE_ID",
+        "matchOn": "opportunity_id",
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "opportunity_id": "={{ $json.opportunity_id }}",
             "title": "={{ $json.title }}",
@@ -516,84 +315,7 @@
             "reason": "={{ $json.eval_reasoning }}",
             "score": "={{ $json.alignment_score }}",
             "updated_at": "={{ $now.toISO() }}"
-          },
-          "matchingColumns": [
-            "opportunity_id"
-          ],
-          "schema": [
-            {
-              "id": "opportunity_id",
-              "displayName": "opportunity_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "title",
-              "displayName": "title",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "funder",
-              "displayName": "funder",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "stage",
-              "displayName": "stage",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "reason",
-              "displayName": "reason",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "score",
-              "displayName": "score",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": true,
-          "convertFieldsToString": false
+          }
         }
       },
       "id": "672948abd63f4b68",
@@ -608,23 +330,9 @@
     {
       "parameters": {
         "operation": "upsert",
-        "dataTableId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "options": {},
-        "matchType": "anyCondition",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "opportunity_id",
-              "keyValue": "={{ $json.opportunity_id }}"
-            }
-          ]
-        },
+        "tableId": "REPLACE_WITH_funding_opportunities_TABLE_ID",
+        "matchOn": "opportunity_id",
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "opportunity_id": "={{ $json.opportunity_id }}",
             "title": "={{ $json.title }}",
@@ -633,84 +341,7 @@
             "reason": "={{ $json.eval_reasoning }}",
             "score": "={{ $json.alignment_score }}",
             "updated_at": "={{ $now.toISO() }}"
-          },
-          "matchingColumns": [
-            "opportunity_id"
-          ],
-          "schema": [
-            {
-              "id": "opportunity_id",
-              "displayName": "opportunity_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "title",
-              "displayName": "title",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "funder",
-              "displayName": "funder",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "stage",
-              "displayName": "stage",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "reason",
-              "displayName": "reason",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "score",
-              "displayName": "score",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": true,
-          "convertFieldsToString": false
+          }
         }
       },
       "id": "040f8f6d7d7d428d",
@@ -781,109 +412,15 @@
     {
       "parameters": {
         "operation": "upsert",
-        "dataTableId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "options": {},
-        "matchType": "anyCondition",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "opportunity_id",
-              "keyValue": "={{ $('Parse Evaluation').item.json.opportunity_id }}"
-            }
-          ]
-        },
+        "tableId": "REPLACE_WITH_funding_opportunities_TABLE_ID",
+        "matchOn": "opportunity_id",
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "opportunity_id": "={{ $('Parse Evaluation').item.json.opportunity_id }}",
-            "title": "={{ $('Parse Evaluation').item.json.title }}",
-            "funder": "={{ $('Parse Evaluation').item.json.funder }}",
             "stage": "declined_by_human",
             "reason": "Human chose not to pursue",
-            "score": "={{ $('Parse Evaluation').item.json.alignment_score }}",
             "updated_at": "={{ $now.toISO() }}"
-          },
-          "matchingColumns": [
-            "opportunity_id"
-          ],
-          "schema": [
-            {
-              "id": "opportunity_id",
-              "displayName": "opportunity_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "title",
-              "displayName": "title",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "funder",
-              "displayName": "funder",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "stage",
-              "displayName": "stage",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "reason",
-              "displayName": "reason",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "score",
-              "displayName": "score",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": true,
-          "convertFieldsToString": false
+          }
         }
       },
       "id": "b0a8801fd81f4d94",
@@ -898,14 +435,8 @@
     {
       "parameters": {
         "operation": "insert",
-        "dataTableId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "options": {},
+        "tableId": "REPLACE_WITH_application_prep_TABLE_ID",
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "opportunity_id": "={{ $('Parse Evaluation').item.json.opportunity_id }}",
             "title": "={{ $('Parse Evaluation').item.json.title }}",
@@ -919,132 +450,7 @@
             "draft_notes": "={{ $('Parse Evaluation').item.json.eval_reasoning }}",
             "status": "prep_started",
             "created_at": "={{ $now.toISO() }}"
-          },
-          "matchingColumns": [],
-          "schema": [
-            {
-              "id": "opportunity_id",
-              "displayName": "opportunity_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "title",
-              "displayName": "title",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "funder",
-              "displayName": "funder",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "deadline",
-              "displayName": "deadline",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "amount",
-              "displayName": "amount",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "score",
-              "displayName": "score",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "effort",
-              "displayName": "effort",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "owner",
-              "displayName": "owner",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "required_docs",
-              "displayName": "required_docs",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "draft_notes",
-              "displayName": "draft_notes",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "status",
-              "displayName": "status",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "created_at",
-              "displayName": "created_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": true,
-          "convertFieldsToString": false
+          }
         }
       },
       "id": "c9bb2f7dc05b4860",
@@ -1059,106 +465,15 @@
     {
       "parameters": {
         "operation": "upsert",
-        "dataTableId": {
-          "__rl": true,
-          "mode": "list",
-          "value": ""
-        },
-        "options": {},
-        "matchType": "anyCondition",
-        "filters": {
-          "conditions": [
-            {
-              "keyName": "opportunity_id",
-              "keyValue": "={{ $('Parse Evaluation').item.json.opportunity_id }}"
-            }
-          ]
-        },
+        "tableId": "REPLACE_WITH_funding_opportunities_TABLE_ID",
+        "matchOn": "opportunity_id",
         "columns": {
-          "mappingMode": "defineBelow",
           "value": {
             "opportunity_id": "={{ $('Parse Evaluation').item.json.opportunity_id }}",
             "stage": "application_prep",
             "reason": "Approved by human; prep record created",
             "updated_at": "={{ $now.toISO() }}"
-          },
-          "matchingColumns": [
-            "opportunity_id"
-          ],
-          "schema": [
-            {
-              "id": "opportunity_id",
-              "displayName": "opportunity_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "title",
-              "displayName": "title",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "funder",
-              "displayName": "funder",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "stage",
-              "displayName": "stage",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "reason",
-              "displayName": "reason",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "score",
-              "displayName": "score",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "number",
-              "readOnly": false,
-              "removed": false
-            },
-            {
-              "id": "updated_at",
-              "displayName": "updated_at",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "readOnly": false,
-              "removed": false
-            }
-          ],
-          "attemptToConvertTypes": true,
-          "convertFieldsToString": false
+          }
         }
       },
       "id": "c3d4c8fcd7914aec",
